@@ -10,14 +10,12 @@ HF_API_KEY = os.getenv("HF_API_KEY")
 # Deepfake detection model
 API_URL = "https://router.huggingface.co/hf-inference/models/dima806/deepfake_vs_real_image_detection"
 
-
 @app.get("/")
 def home():
     return {
         "status": "success",
         "message": "DeepProof AI API is running!"
     }
-
 
 @app.post("/scan")
 async def scan_image(file: UploadFile = File(...)):
@@ -45,14 +43,13 @@ async def scan_image(file: UploadFile = File(...)):
             "message": "Uploaded image is empty."
         }
 
-    # Hugging Face headers
+    # Hugging Face headers - ෆොටෝ එකේ නියම ෆෝමැට් එක යවන්න වෙනස් කර ඇත
     headers = {
         "Authorization": f"Bearer {HF_API_KEY}",
-        "Content-Type": "application/octet-stream"
+        "Content-Type": file.content_type
     }
 
     try:
-
         # Send image to Hugging Face
         response = requests.post(
             API_URL,
@@ -94,7 +91,6 @@ async def scan_image(file: UploadFile = File(...)):
 
     # HTTP error from Hugging Face
     if response.status_code != 200:
-
         return {
             "status": "error",
             "http_status": response.status_code,
@@ -104,7 +100,6 @@ async def scan_image(file: UploadFile = File(...)):
 
     # Make sure response is a list
     if not isinstance(result, list) or len(result) == 0:
-
         return {
             "status": "error",
             "message": "AI returned an unexpected result.",
@@ -126,12 +121,10 @@ async def scan_image(file: UploadFile = File(...)):
         is_deepfake = True
         prediction = "FAKE"
         message = "Warning: Fake / AI-generated image detected!"
-
     elif label == "real":
         is_deepfake = False
         prediction = "REAL"
         message = "Image appears to be Real."
-
     else:
         # Unknown label
         is_deepfake = None
@@ -141,18 +134,10 @@ async def scan_image(file: UploadFile = File(...)):
     # Final response
     return {
         "status": "success",
-
         "filename": file.filename,
-
         "prediction": prediction,
-
         "is_deepfake": is_deepfake,
-
         "ai_confidence": f"{confidence:.2f}%",
-
         "message": message,
-
-        # IMPORTANT:
-        # This lets us see exactly what Hugging Face returned.
         "raw_model_result": result
     }
