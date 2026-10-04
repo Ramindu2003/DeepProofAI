@@ -1,39 +1,40 @@
-from fastapi import FastAPI, UploadFile, File
-import cv2
-import numpy as np
-from PIL import Image
-import io
+from fastapi import FastAPI, File, UploadFile
+import uvicorn
+import requests
+import os
 
-# 1. API එක ආරම්භ කිරීම
-app = FastAPI(title="DeepProof AI Verification API")
+app = FastAPI(title="DeepProof AI API")
 
-# 2. Photo එක Upload කරන Endpoint එක
+# Render එකේ සඟවලා තියෙන API Key එක මෙතනින් කෝඩ් එකට ගන්නවා
+HF_API_KEY = os.getenv("HF_API_KEY")
+# Hugging Face එකේ තියෙන Deepfake Detection AI මොඩල් එකේ ලින්ක් එක
+API_URL = "https://api-inference.huggingface.co/models/dima806/deepfake_vs_real_image_detection"
+
 @app.post("/scan")
-async def scan_media(file: UploadFile = File(...)):
-    try:
-        # Photo එකේ Data ටික කියවා ගැනීම
-        contents = await file.read()
-        image = Image.open(io.BytesIO(contents)).convert('RGB')
-        img_np = np.array(image)
+async def scan_image(file: UploadFile = File(...)):
+    headers = {"Authorization": f"Bearer {HF_API_KEY}"}
+    image_bytes = await file.read()
+    
+    # AI මොළයට ෆොටෝ එක යැවීම
+    response = requests.post(API_URL, headers=headers, data=image_bytes)
+    result = response.json()
+    
+    # AI එකෙන් එන උත්තරේ විශ්ලේෂණය කිරීම
+    if isinstance(result, list) and len(result) > 0:
+        best_match = result[0]
+        # AI එක කියන විදියට මේක Fake ද (Deepfake) කියලා බලමු
+        is_deepfake = True if best_match.get('label', '').lower() == 'fake' else False
+        confidence = best_match.get('score', 0) * 100
         
-        # Photo එක කළු-සුදු (Grayscale) කිරීම (ලේසියෙන් process කරන්න)
-        gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
-        
-        # Laplacian Variance එකෙන් Photo එකේ දාර (Edges/Sharpness) මැනීම
-        laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
-        
-        # Score එක 100 ට අඩු නම්, ඒක AI හදපු හෝ Blurry එකක් කියලා අනුමාන කරනවා
-        is_synthetic = bool(laplacian_var < 100)
-        
-        # Result එක JSON විදියට එළියට දෙනවා
         return {
             "status": "success",
             "filename": file.filename,
-            "is_deepfake": is_synthetic,
-            "metrics": {
-                "sharpness_score": round(laplacian_var, 2)
-            },
-            "message": "Warning: Fake or Blurry" if is_synthetic else "Authentic"
+            "is_deepfake": is_deepfake,
+            "ai_confidence": f"{confidence:.2f}%",
+            "message": "Warning: Deepfake Detected!" if is_deepfake else "Authentic Image"
         }
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+    else:
+        return {"status": "error", "message": "AI System Loading or Error. Try again in 10 seconds."}
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=10000)
