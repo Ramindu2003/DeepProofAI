@@ -1,6 +1,6 @@
 from fastapi import FastAPI, File, UploadFile
 import uvicorn
-import requests
+import httpx
 import os
 
 app = FastAPI(title="DeepProof AI API")
@@ -15,9 +15,14 @@ async def scan_image(file: UploadFile = File(...)):
     headers = {"Authorization": f"Bearer {HF_API_KEY}"}
     image_bytes = await file.read()
     
-    # AI මොළයට ෆොටෝ එක යැවීම
-    response = requests.post(API_URL, headers=headers, data=image_bytes)
-    result = response.json()
+    # httpx පාවිච්චි කරලා ආරක්ෂිතව ෆොටෝ එක යැවීම
+    async with httpx.AsyncClient() as client:
+        try:
+            # තත්පර 30ක කාලයක් දෙනවා AI එකට හිතන්න
+            response = await client.post(API_URL, headers=headers, content=image_bytes, timeout=30.0)
+            result = response.json()
+        except Exception as e:
+            return {"status": "error", "message": f"Network Error: {str(e)}. Please try again."}
     
     # AI එකෙන් එන උත්තරේ විශ්ලේෂණය කිරීම
     if isinstance(result, list) and len(result) > 0:
@@ -34,7 +39,7 @@ async def scan_image(file: UploadFile = File(...)):
             "message": "Warning: Deepfake Detected!" if is_deepfake else "Authentic Image"
         }
     else:
-        return {"status": "error", "message": "AI System Loading or Error. Try again in 10 seconds."}
+        return {"status": "error", "message": "AI System Loading. Try again in 10 seconds.", "details": result}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=10000)
