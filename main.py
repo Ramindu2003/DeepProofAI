@@ -1,12 +1,20 @@
 from fastapi import FastAPI, File, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 import requests
 import os
 
 app = FastAPI(title="DeepProof AI API")
 
-HF_API_KEY = os.getenv("HF_API_KEY")
+# Frontend එකට කතා කරන්න අවසර දීම (CORS)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# අලුත්, වඩාත් සාර්ථක AI මොඩල් එක (AI-image-detector)
+HF_API_KEY = os.getenv("HF_API_KEY")
 API_URL = "https://router.huggingface.co/hf-inference/models/umm-maybe/AI-image-detector"
 
 @app.get("/")
@@ -46,7 +54,6 @@ async def scan_image(file: UploadFile = File(...)):
     label = str(best_match.get("label", "")).lower()
     confidence = float(best_match.get("score", 0)) * 100
     
-    # අලුත් මොඩල් වල එන විවිධ නම් අඳුරගැනීම (Fake/Artificial/AI)
     fake_keywords = ["fake", "artificial", "ai", "generated"]
     real_keywords = ["real", "human", "original", "authentic"]
     
