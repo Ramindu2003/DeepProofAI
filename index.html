@@ -61,8 +61,9 @@
                 if (data.status === "success") {
                     resultDiv.innerHTML = `${data.message}<br><br>AI Confidence: <b>${data.ai_confidence}</b>`;
                     resultDiv.className = data.is_deepfake ? "fake" : "real";
-                } else {
-                    resultDiv.innerHTML = "Error: " + data.message;
+               } else {
+                    const errorMsg = data.message || (data.details && data.details.error) || "Unknown API Error";
+                    resultDiv.innerHTML = "Error: " + errorMsg;
                     resultDiv.className = "fake";
                 }
             } catch (error) {
