@@ -15,7 +15,7 @@ app.add_middleware(
 )
 
 HF_API_KEY = os.getenv("HF_API_KEY")
-API_URL = "https://router.huggingface.co/hf-inference/models/umm-maybe/AI-image-detector"
+API_URL = "https://api-inference.huggingface.co/models/dima806/deepfake_vs_real_image_detection"
 
 @app.get("/")
 def home():
