@@ -37,8 +37,7 @@ async def scan_image(file: UploadFile = File(...)):
     base64_image = base64.b64encode(image_bytes).decode('utf-8')
     
     # 'latest' මොඩල් එක පාවිච්චි කිරීම
-    gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={GEMINI_API_KEY}"
-    
+gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
     prompt_text = """Analyze this image carefully. Is it a real authentic photograph or an AI-generated image (Deepfake)? 
     Return ONLY a valid JSON object strictly matching this format:
     {
