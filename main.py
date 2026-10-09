@@ -7,7 +7,6 @@ import json
 
 app = FastAPI(title="DeepProof AI API")
 
-# Frontend එකට කතා කරන්න අවසර දීම (CORS)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -16,8 +15,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Vercel එකේ සේව් කරපු Gemini API Key එක ගැනීම
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# Key එකේ අගට හරි මුලට හරි හිස්තැන් තිබ්බොත් අයින් වෙන්න .strip() දාලා තියෙන්නේ
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 
 @app.get("/")
 def home():
@@ -25,7 +24,6 @@ def home():
 
 @app.post("/scan")
 async def scan_image(file: UploadFile = File(...)):
-    # API Key එක තියෙනවද කියලා චෙක් කිරීම
     if not GEMINI_API_KEY:
         return {"status": "error", "message": "GEMINI_API_KEY is not configured in Vercel."}
         
@@ -36,13 +34,11 @@ async def scan_image(file: UploadFile = File(...)):
     if not image_bytes:
         return {"status": "error", "message": "Uploaded image is empty."}
         
-    # Google Gemini එකට යවන්න ෆොටෝ එක Base64 (Text) විදියට හරවා ගැනීම
     base64_image = base64.b64encode(image_bytes).decode('utf-8')
     
-    # Gemini 1.5 Flash Model URL එක
-    gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    # 'latest' මොඩල් එක පාවිච්චි කිරීම
+    gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={GEMINI_API_KEY}"
     
-    # AI එකට දෙන උපදෙස් (Prompt)
     prompt_text = """Analyze this image carefully. Is it a real authentic photograph or an AI-generated image (Deepfake)? 
     Return ONLY a valid JSON object strictly matching this format:
     {
@@ -51,7 +47,6 @@ async def scan_image(file: UploadFile = File(...)):
         "message": "A short sentence explaining why you think it is real or fake."
     }"""
     
-    # Gemini API එකට යවන දත්ත සැකසීම
     payload = {
         "contents": [{
             "parts": [
@@ -65,7 +60,7 @@ async def scan_image(file: UploadFile = File(...)):
             ]
         }],
         "generationConfig": {
-            "response_mime_type": "application/json" # අනිවාර්යයෙන්ම JSON උත්තරයක් ඉල්ලීම
+            "response_mime_type": "application/json"
         }
     }
     
@@ -74,17 +69,17 @@ async def scan_image(file: UploadFile = File(...)):
     }
     
     try:
-        # Gemini එකට Request එක යැවීම
         response = requests.post(gemini_url, headers=headers, json=payload, timeout=60)
         result = response.json()
     except Exception as e:
         return {"status": "error", "message": f"Connection Error: {str(e)}"}
         
     if response.status_code != 200:
-        return {"status": "error", "http_status": response.status_code, "details": result}
+        # Frontend එකට [object Object] වෙනුවට පැහැදිලි Error Message එකක් යැවීම
+        error_msg = result.get("error", {}).get("message", "Unknown API Error")
+        return {"status": "error", "message": f"Google API Error: {error_msg}"}
         
     try:
-        # Gemini එවපු JSON උත්තරේ කොටස වෙන් කරගෙන කියවීම
         ai_text_response = result["candidates"][0]["content"]["parts"][0]["text"]
         ai_data = json.loads(ai_text_response)
         
@@ -94,7 +89,6 @@ async def scan_image(file: UploadFile = File(...)):
         
         is_deepfake = True if prediction == "FAKE" else False
         
-        # Frontend එකට කලින් විදියටම රිසල්ට් එක යැවීම (එතකොට HTML වෙනස් කරන්න ඕන නෑ)
         return {
             "status": "success",
             "filename": file.filename,
