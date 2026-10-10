@@ -1,4 +1,4 @@
-```python
+
 import os
 import json
 import time
@@ -375,4 +375,3 @@ Confidence must be a number from 0 to 100.
             "An unexpected server error occurred.",
             500,
         )
-```
