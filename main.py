@@ -15,7 +15,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Key එකේ අගට හරි මුලට හරි හිස්තැන් තිබ්බොත් අයින් වෙන්න .strip() දාලා තියෙන්නේ
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 
 @app.get("/")
@@ -36,8 +35,9 @@ async def scan_image(file: UploadFile = File(...)):
         
     base64_image = base64.b64encode(image_bytes).decode('utf-8')
     
-    # 'latest' මොඩල් එක පාවිච්චි කිරීම
-gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    # මෙතන ලින්ක් එක දැන් 100% ක් නිවැරදියි (-latest කෑල්ල නෑ)
+    gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    
     prompt_text = """Analyze this image carefully. Is it a real authentic photograph or an AI-generated image (Deepfake)? 
     Return ONLY a valid JSON object strictly matching this format:
     {
@@ -74,7 +74,6 @@ gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.
         return {"status": "error", "message": f"Connection Error: {str(e)}"}
         
     if response.status_code != 200:
-        # Frontend එකට [object Object] වෙනුවට පැහැදිලි Error Message එකක් යැවීම
         error_msg = result.get("error", {}).get("message", "Unknown API Error")
         return {"status": "error", "message": f"Google API Error: {error_msg}"}
         
