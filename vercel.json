@@ -1,14 +1,14 @@
+
 {
-  "builds": [
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
     {
-      "src": "main.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
+      "source": "/scan",
+      "destination": "/api/index"
+    },
     {
-      "src": "/(.*)",
-      "dest": "main.py"
+      "source": "/health",
+      "destination": "/api/index"
     }
   ]
 }
